@@ -12,11 +12,11 @@ function setUpUpdater() {
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('update-not-available', () => {
-    if (manualCheck) dialog.showMessageBox({ type: 'info', message: `LightBrowser ${app.getVersion()} is up to date.` });
+    if (manualCheck) dialog.showMessageBox({ type: 'info', message: `CozyBrowsin ${app.getVersion()} is up to date.` });
     manualCheck = false;
   });
   autoUpdater.on('update-available', info => {
-    if (manualCheck) dialog.showMessageBox({ type: 'info', message: `Downloading LightBrowser ${info.version} in the background.` });
+    if (manualCheck) dialog.showMessageBox({ type: 'info', message: `Downloading CozyBrowsin ${info.version} in the background.` });
     manualCheck = false;
   });
   autoUpdater.on('error', err => {
@@ -26,7 +26,7 @@ function setUpUpdater() {
     manualCheck = false;
   });
   autoUpdater.on('update-downloaded', async info => {
-    const { response } = await dialog.showMessageBox({ type: 'question', buttons: ['Restart and update', 'Later'], defaultId: 0, cancelId: 1, message: `LightBrowser ${info.version} is ready to install.`, detail: 'Choosing Later installs it the next time you quit.' });
+    const { response } = await dialog.showMessageBox({ type: 'question', buttons: ['Restart and update', 'Later'], defaultId: 0, cancelId: 1, message: `CozyBrowsin ${info.version} is ready to install.`, detail: 'Choosing Later installs it the next time you quit.' });
     if (response === 0) autoUpdater.quitAndInstall();
   });
 

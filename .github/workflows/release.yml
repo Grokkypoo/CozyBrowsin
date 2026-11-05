@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 env:
-  LIGHTBROWSER_UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download
+  COZYBROWSIN_UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download
 jobs:
   build:
     strategy:
@@ -37,6 +37,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { path: out, merge-multiple: true }
-      - run: gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --generate-notes
+      # The release may already exist if it was created on GitHub, which is also what makes the tag.
+      - run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ github.token }}

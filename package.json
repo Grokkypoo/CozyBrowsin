@@ -1,5 +1,5 @@
 {
-  "name": "lightbrowser",
+  "name": "cozybrowsin",
   "version": "0.1.0",
   "private": true,
   "description": "A plain Chromium window with no browser UI, for personal use.",
@@ -16,8 +16,8 @@
   },
   "author": "CoolGuy",
   "build": {
-    "appId": "local.lightbrowser.app",
-    "productName": "LightBrowser",
+    "appId": "local.cozybrowsin.app",
+    "productName": "CozyBrowsin",
     "files": [
       "main.js",
       "updater.js"
@@ -26,10 +26,10 @@
       "output": "dist",
       "buildResources": "build"
     },
-    "artifactName": "LightBrowser-${version}-${arch}.${ext}",
+    "artifactName": "CozyBrowsin-${version}-${arch}.${ext}",
     "publish": {
       "provider": "generic",
-      "url": "${env.LIGHTBROWSER_UPDATE_URL}"
+      "url": "${env.COZYBROWSIN_UPDATE_URL}"
     },
     "linux": {
       "target": [

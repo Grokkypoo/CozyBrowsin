@@ -1,6 +1,6 @@
 // End-to-end updater test: runs the real 0.1.0 AppImage against a local feed serving a real 0.1.1 build.
 // Usage: OLD=<0.1.0 AppImage> FEED=<dir with 0.1.1 build> SCRATCH=<tmp dir> node test/update-e2e.mjs
-// Both builds must use LIGHTBROWSER_UPDATE_URL=http://127.0.0.1:45901. Set USE_FUSE=1 to mount instead of extracting.
+// Both builds must use COZYBROWSIN_UPDATE_URL=http://127.0.0.1:45901. Set USE_FUSE=1 to mount instead of extracting.
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';

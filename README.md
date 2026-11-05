@@ -1,4 +1,4 @@
-# lightbrowser
+# cozybrowsin
 
 A plain Chromium window with no browser UI, like Vesktop's "Open Links in App", for everyday personal use. It has its own profile, so it's separate from Discord.
 
@@ -28,7 +28,7 @@ npx electron .
 The packaged app needs no separate Node install, because Electron ships its own runtime. Node is only needed to build.
 
 ```bash
-LIGHTBROWSER_UPDATE_URL=https://github.com/OWNER/REPO/releases/latest/download npm run dist:linux
+COZYBROWSIN_UPDATE_URL=https://github.com/OWNER/REPO/releases/latest/download npm run dist:linux
 ```
 
 The URL is built into the app and is where it looks for updates.

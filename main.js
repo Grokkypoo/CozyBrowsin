@@ -6,10 +6,10 @@ const { setUpUpdater, checkForUpdatesNow } = require('./updater');
 
 const HOME = 'https://duckduckgo.com/';
 const ASK = new Set(['media', 'geolocation', 'notifications', 'display-capture', 'clipboard-read']);
-const GO = 'https://lightbrowser.invalid/go?u=';
+const GO = 'https://cozybrowsin.invalid/go?u=';
 
 // Applies to every page, including popups. Pages see a normal Chrome UA.
-app.userAgentFallback = app.userAgentFallback.replace(/ (Electron|lightbrowser)\/\S+/g, '');
+app.userAgentFallback = app.userAgentFallback.replace(/ (Electron|cozybrowsin)\/\S+/gi, '');
 
 const urlFromArgs = argv => argv.slice(1).find(a => /^https?:\/\//i.test(a));
 
