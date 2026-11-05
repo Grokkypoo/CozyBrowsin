@@ -1,6 +1,6 @@
 {
   "name": "cozybrowsin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A plain Chromium window with no browser UI, for personal use.",
   "license": "UNLICENSED",
