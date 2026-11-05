@@ -1,0 +1,63 @@
+{
+  "name": "lightbrowser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A plain Chromium window with no browser UI, for personal use.",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0"
+  },
+  "author": "CoolGuy",
+  "build": {
+    "appId": "local.lightbrowser.app",
+    "productName": "LightBrowser",
+    "files": [
+      "main.js",
+      "updater.js"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "artifactName": "LightBrowser-${version}-${arch}.${ext}",
+    "publish": {
+      "provider": "generic",
+      "url": "${env.LIGHTBROWSER_UPDATE_URL}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Network"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeCliInspectArguments": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "onlyLoadAppFromAsar": true
+    },
+    "toolsets": {
+      "appimage": "1.0.3"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  }
+}
