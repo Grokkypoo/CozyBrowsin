@@ -1,4 +1,4 @@
-# Builds Windows and Linux packages and publishes them as a GitHub Release, which installed apps update from.
+# Builds the Linux package and publishes them as a GitHub Release, which installed apps update from.
 # Runs when you push a tag like v0.2.0, or by hand from the Actions tab.
 name: Release
 on:
@@ -14,7 +14,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: windows-latest, script: 'dist:win' }
           - { os: ubuntu-latest, script: 'dist:linux' }
     runs-on: ${{ matrix.os }}
     steps:
@@ -27,7 +26,6 @@ jobs:
         with:
           name: ${{ matrix.os }}
           path: |
-            dist/*.exe
             dist/*.AppImage
             dist/*.tar.gz
             dist/*.blockmap

@@ -8,9 +8,9 @@ A plain Chromium window with no browser UI, like Vesktop's "Open Links in App", 
 |---|---|
 | Linux package with everything bundled | Built; the unpacked build starts and loads pages |
 | Update check against a feed | Works: the packaged app requested `latest-linux.yml` |
-| Download, install and restart | **Not proven.** `test/update-e2e.mjs` has never completed; the cause is unresolved |
-| Rejecting a tampered download | **Not proven**, same test |
-| Windows installer | **Not built.** It needs Wine or Windows, and neither was usable here. `release.yml` should build it on GitHub, but that workflow has never been run |
+| Download, install and restart | Works against a local feed, for both **Restart and update** and **Later** then quit (`test/update-e2e.mjs`). Not yet tried against a real GitHub release |
+| Rejecting a corrupted download | Works: a flipped byte fails the sha512 check and nothing is installed. Updates aren't signed, so this won't catch someone who can also change `latest-linux.yml` |
+| Windows installer | **Not built.** It needs Wine or Windows, and neither was usable here. `release.yml` is Linux-only for now |
 
 The AppImage and `.tar.gz` in `dist/` are **test builds**. Their updater points at a local test address, so don't install them for real use.
 

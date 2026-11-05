@@ -1,21 +1,121 @@
-// End-to-end updater test on the packaged Linux app: real AppImage, real electron-updater, local feed.
-// Status: has not completed successfully; see README. Usage: FEED=<dir with 0.1.1 build> APP=<0.1.0 AppImage> SCRATCH=<tmp> node test/update-e2e.mjs
-import fs from 'node:fs'; import path from 'node:path'; import http from 'node:http'; import crypto from 'node:crypto'; import { spawn, execSync } from 'node:child_process'; import { createRequire } from 'node:module';
-const require = createRequire(path.resolve(import.meta.dirname, '../') + '/'); const asar = require('@electron/asar');
-const { FEED, APP, SCRATCH } = process.env; const sleep = ms => new Promise(r => setTimeout(r, ms)); const sha = f => crypto.createHash('sha512').update(fs.readFileSync(f)).digest('base64');
-const D = ':341'; const xv = spawn('Xvfb', [D, '-screen', '0', '1400x900x24'], { stdio: 'ignore' }); await sleep(400); const kids = [];
-const wm = spawn('openbox', [], { env: { ...process.env, DISPLAY: D }, stdio: 'ignore' }); await sleep(500);
-let served = FEED, log = []; const srv = http.createServer((q, s) => { const f = path.join(served, decodeURIComponent(q.url.split('?')[0])); log.push(q.url.split('?')[0]); if (!fs.existsSync(f)) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'content-length': fs.statSync(f).size }); fs.createReadStream(f).pipe(s); }); await new Promise(r => srv.listen(45901, '127.0.0.1', r));
-const versionOf = file => { const d = fs.mkdtempSync(SCRATCH + '/x-'); execSync(`cd ${d} && APPIMAGE_EXTRACT_AND_RUN=1 ${file} --appimage-extract resources/app.asar >/dev/null 2>&1`); const v = JSON.parse(asar.extractFile(d + '/squashfs-root/resources/app.asar', 'package.json').toString()).version; fs.rmSync(d, { recursive: true, force: true }); return v; };
-let r0; const scenario = async (name, feedDir, press) => { served = feedDir; log = []; const home = fs.mkdtempSync(SCRATCH + '/u-'); const file = home + '/LightBrowser.AppImage'; fs.copyFileSync(APP, file); fs.chmodSync(file, 0o755);
-  const env = { ...process.env, DISPLAY: D, WAYLAND_DISPLAY: '', HOME: home, XDG_CONFIG_HOME: home + '/c', XDG_CACHE_HOME: home + '/k', APPIMAGE_EXTRACT_AND_RUN: '1', TMPDIR: home }; const before = versionOf(file);
-  execSync(`cd ${home} && APPIMAGE_EXTRACT_AND_RUN=1 ${file} --appimage-extract >/dev/null 2>&1`); env.APPIMAGE = file; const outLog = fs.openSync(home + '/out.log', 'a'); r0 = fs.readdirSync(home); const p = spawn(home + '/squashfs-root/lightbrowser', [], { env, detached: true, stdio: ['ignore', outLog, outLog] }); kids.push(p); const t0 = Date.now();
-  const got = async re => { while (Date.now() - t0 < 60000) { if (log.some(u => re.test(u))) return true; await sleep(200); } return false; };
-  const r = { name, before, r0, checkedFeed: await got(/latest-linux\.yml/), downloaded: await got(/\.AppImage$/) }; await sleep(6000);
-  try { execSync(`DISPLAY=${D} import -window root ${SCRATCH}/update-dialog-${name}.png`); } catch {}
-  if (press) { execSync(`DISPLAY=${D} xdotool key Return`); await sleep(9000); log = []; const relaunched = await (async () => { for (let i = 0; i < 40; i++) { if (log.some(u => /latest-linux/.test(u))) return true; await sleep(500); } return false; })(); r.newProcessCheckedFeedAgain = relaunched; }
-  r.log = fs.readFileSync(home + '/out.log', 'utf8').split('\n').filter(l => !/dbus|appimage_extracted/.test(l)).slice(-4).map(l => l.slice(0, 160)); r.after = versionOf(file); r.fileMatchesFeed = sha(file) === sha(path.join(FEED, fs.readdirSync(FEED).find(x => x.endsWith('.AppImage')))); try { process.kill(-p.pid, 'SIGKILL'); } catch {} execSync(`pkill -9 -f "^${home}" || true`, { shell: '/bin/bash' }); console.log(JSON.stringify(r)); await sleep(800); try { fs.rmSync(home, { recursive: true, force: true, maxRetries: 3 }); } catch {} return r; };
-const ok = await scenario('update', FEED, true);
-// Tampered feed: valid metadata, one flipped byte in the download.
-const bad = fs.mkdtempSync(SCRATCH + '/bad-'); for (const f of fs.readdirSync(FEED)) { if (fs.statSync(path.join(FEED, f)).isFile()) fs.copyFileSync(path.join(FEED, f), path.join(bad, f)); } const af = path.join(bad, fs.readdirSync(bad).find(x => x.endsWith('.AppImage'))); const fd = fs.openSync(af, 'r+'); const b = Buffer.alloc(1); fs.readSync(fd, b, 0, 1, 5000000); b[0] ^= 255; fs.writeSync(fd, b, 0, 1, 5000000); fs.closeSync(fd);
-await scenario('tampered', bad, false); fs.rmSync(bad, { recursive: true, force: true }); srv.close(); try { wm.kill(); xv.kill(); } catch {} process.exit(0);
+// End-to-end updater test: runs the real 0.1.0 AppImage against a local feed serving a real 0.1.1 build.
+// Usage: OLD=<0.1.0 AppImage> FEED=<dir with 0.1.1 build> SCRATCH=<tmp dir> node test/update-e2e.mjs
+// Both builds must use LIGHTBROWSER_UPDATE_URL=http://127.0.0.1:45901. Set USE_FUSE=1 to mount instead of extracting.
+import fs from 'node:fs';
+import path from 'node:path';
+import http from 'node:http';
+import crypto from 'node:crypto';
+import { spawn, execFileSync } from 'node:child_process';
+
+const { OLD, FEED, SCRATCH, USE_FUSE } = process.env;
+const DISPLAY = ':341';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sha = f => crypto.createHash('sha512').update(fs.readFileSync(f)).digest('base64');
+const key = k => execFileSync('xdotool', ['key', k], { env: { ...process.env, DISPLAY } });
+const shot = name => { try { execFileSync('import', ['-window', 'root', `${SCRATCH}/${name}.png`], { env: { ...process.env, DISPLAY } }); } catch {} };
+
+const xvfb = spawn('Xvfb', [DISPLAY, '-screen', '0', '1400x900x24'], { stdio: 'ignore' });
+await sleep(500);
+const wm = spawn('openbox', [], { env: { ...process.env, DISPLAY }, stdio: 'ignore' });
+await sleep(500);
+
+let served = FEED;
+let hits = [];
+const server = http.createServer((req, res) => {
+  const name = decodeURIComponent(req.url.split('?')[0]);
+  const file = path.join(served, name);
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); return res.end(); }
+  res.writeHead(200, { 'content-length': fs.statSync(file).size });
+  const stream = fs.createReadStream(file);
+  stream.on('end', () => hits.push({ name, finished: true }));
+  hits.push({ name, finished: false });
+  stream.pipe(res);
+});
+await new Promise(r => server.listen(45901, '127.0.0.1', r));
+
+const until = async (test, ms) => { const end = Date.now() + ms; while (Date.now() < end) { if (test()) return true; await sleep(200); } return false; };
+const finished = re => () => hits.some(h => h.finished && re.test(h.name));
+
+// Relaunched copies start in their own session, so find everything by where its executable lives.
+function killAllUnder(dir) {
+  for (const pid of fs.readdirSync('/proc').filter(p => /^\d+$/.test(p))) {
+    try { if (fs.readlinkSync(`/proc/${pid}/exe`).startsWith(dir)) process.kill(+pid, 'SIGKILL'); } catch {}
+  }
+}
+
+async function scenario(name, feed, steps) {
+  served = feed;
+  hits = [];
+  const home = fs.mkdtempSync(`${SCRATCH}/${name}-`);
+  fs.mkdirSync(`${home}/tmp`);
+  const oldFile = `${home}/${path.basename(OLD)}`;
+  fs.copyFileSync(OLD, oldFile);
+  fs.chmodSync(oldFile, 0o755);
+  const env = { ...process.env, DISPLAY, WAYLAND_DISPLAY: '', HOME: home, XDG_CONFIG_HOME: `${home}/c`, XDG_CACHE_HOME: `${home}/k`, TMPDIR: `${home}/tmp` };
+  if (!USE_FUSE) env.APPIMAGE_EXTRACT_AND_RUN = '1';
+  const logFd = fs.openSync(`${home}/out.log`, 'a');
+  const before = sha(oldFile);
+  spawn(oldFile, [], { env, detached: true, stdio: ['ignore', logFd, logFd] }).unref();
+  const result = { name, checkedFeed: await until(finished(/latest-linux\.yml$/), 45000) };
+  await steps({ result, oldFile, home, before });
+  result.log = fs.readFileSync(`${home}/out.log`, 'utf8').split('\n').filter(l => /update|sha512|error|differential|fallback/i.test(l) && !/dbus|gpu/i.test(l)).slice(-8).map(l => l.slice(0, 200));
+  result.filesAfter = fs.readdirSync(home).filter(f => f.endsWith('.AppImage'));
+  killAllUnder(home);
+  await sleep(1000);
+  console.log(JSON.stringify(result, null, 1));
+  fs.rmSync(home, { recursive: true, force: true, maxRetries: 3 });
+  return result;
+}
+
+const newName = fs.readdirSync(FEED).find(f => f.endsWith('.AppImage'));
+const newHash = sha(path.join(FEED, newName));
+
+// Accept the prompt: the file is replaced and the new version starts.
+await scenario('restart', FEED, async ({ result, home }) => {
+  result.downloaded = await until(finished(/\.AppImage$/), 120000);
+  await sleep(8000);
+  shot('restart-prompt');
+  hits = [];
+  key('Return');
+  result.relaunchCheckedFeed = await until(finished(/latest-linux\.yml$/), 45000);
+  const installed = `${home}/${newName}`;
+  result.installedMatchesFeed = fs.existsSync(installed) && sha(installed) === newHash;
+  result.oldFileRemoved = !fs.existsSync(`${home}/${path.basename(OLD)}`);
+  await sleep(4000);
+  result.redownloadedAfterUpdate = hits.some(h => /\.AppImage$/.test(h.name));
+  shot('restart-after');
+});
+
+// Choose Later, then quit: the update installs on the way out.
+await scenario('later', FEED, async ({ result, home }) => {
+  result.downloaded = await until(finished(/\.AppImage$/), 120000);
+  await sleep(8000);
+  key('Escape');
+  await sleep(2000);
+  key('ctrl+q');
+  const installed = `${home}/${newName}`;
+  result.installedOnQuit = await until(() => fs.existsSync(installed) && sha(installed) === newHash, 30000);
+});
+
+// Valid metadata, one flipped byte in the download: nothing may be installed.
+const bad = fs.mkdtempSync(`${SCRATCH}/badfeed-`);
+for (const f of fs.readdirSync(FEED)) if (fs.statSync(path.join(FEED, f)).isFile()) fs.copyFileSync(path.join(FEED, f), path.join(bad, f));
+const fd = fs.openSync(path.join(bad, newName), 'r+');
+const byte = Buffer.alloc(1);
+fs.readSync(fd, byte, 0, 1, 5000000);
+byte[0] ^= 255;
+fs.writeSync(fd, byte, 0, 1, 5000000);
+fs.closeSync(fd);
+await scenario('tampered', bad, async ({ result, oldFile, home, before }) => {
+  result.downloaded = await until(finished(/\.AppImage$/), 120000);
+  await sleep(10000);
+  shot('tampered');
+  result.oldFileUnchanged = sha(oldFile) === before;
+  result.newFileAbsent = !fs.existsSync(`${home}/${newName}`);
+});
+fs.rmSync(bad, { recursive: true, force: true });
+
+server.close();
+wm.kill();
+xvfb.kill();
+process.exit(0);
