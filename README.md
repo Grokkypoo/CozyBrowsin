@@ -1,6 +1,6 @@
 # cozybrowsin
 
-A plain Chromium window with no browser UI, like Vesktop's "Open Links in App", for everyday personal use. It has its own profile, so it's separate from Discord.
+A minimal Chromium browser with tabs and Brave's ad blocker, for everyday personal use. It has its own profile, so it's separate from Discord.
 
 ## Status
 
@@ -10,6 +10,7 @@ A plain Chromium window with no browser UI, like Vesktop's "Open Links in App", 
 | Update check against a feed | Works: the packaged app requested `latest-linux.yml` |
 | Download, install and restart | Works against a local feed, for both **Restart and update** and **Later** then quit (`test/update-e2e.mjs`). Not yet tried against a real GitHub release |
 | Rejecting a corrupted download | Works: a flipped byte fails the sha512 check and nothing is installed. Updates aren't signed, so this won't catch someone who can also change `latest-linux.yml` |
+| Tabs and ad blocking | Works: `test/browser-e2e.cjs` covers tabs, popups, blocking, element hiding, YouTube's scriptlet and the per-site switch |
 | Windows installer | **Not built.** It needs Wine or Windows, and neither was usable here. `release.yml` is Linux-only for now |
 
 The AppImage and `.tar.gz` in `dist/` are **test builds**. Their updater points at a local test address, so don't install them for real use.
@@ -18,8 +19,11 @@ The AppImage uses a static runtime, so it doesn't need `libfuse2`, but the syste
 
 ## Run from source
 
+Building needs Rust and a C compiler, because Brave's ad block engine compiles during `npm install`.
+
 ```bash
 npm install
+npm run fetch-filters
 npx electron .
 ```
 
@@ -50,16 +54,27 @@ Builds are unsigned. Windows SmartScreen will warn on install. Updates are prote
 | Ctrl+L | Type an address or search |
 | Alt+Left / Alt+Right | Back / forward |
 | Ctrl+R | Reload |
+| Ctrl+T | New tab |
+| Ctrl+W | Close tab, and the window with its last tab |
+| Ctrl+Shift+T | Reopen closed tab |
+| Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab |
+| Ctrl+1 to Ctrl+8, Ctrl+9 | Pick a tab, last tab |
 | Ctrl+N | New window |
-| Ctrl+W | Close window |
 | F12 | Developer tools |
 | Ctrl+Q | Quit |
 
 ## Good to know
 
-- There are no tabs, by design. Each page is a window.
+- Middle-click a tab to close it. Ctrl+click or middle-click a link to open it in a new tab.
 - Camera, mic, location, notifications, screen capture and clipboard reading ask first. Answers last until you quit.
 - Chromium saves cookies on a delay, so a crash or force-kill can lose very recent logins. Quit with Ctrl+Q.
-- It has no ad blocker, password manager or Safe Browsing.
+- Ad blocking uses Brave's `adblock-rust` engine with Brave's default lists, minus the mobile-only ones. Lists refresh daily and apply at the next start.
+- The button at the top right shows how many requests were blocked on the page. Click it to turn blocking off for that site, for example if blocking breaks it.
+- It doesn't have Brave's other protections, such as fingerprint randomizing, or uBlock's procedural (`:has-text`-style) element hiding.
+- It has no password manager or Safe Browsing.
 - It only gets browser security fixes when a new release is published, so publish regularly.
 - To change the home page or search engine, edit `HOME` in `main.js`.
+
+## Third-party filters
+
+Builds bundle filter lists and scriptlets that keep their own licenses, including EasyList (GPLv3 or CC BY-SA 3.0), uBlock Origin's scriptlets and uAssets lists (GPLv3) and Brave's lists and resources (MPL 2.0). `filters/manifest.json` lists every source.

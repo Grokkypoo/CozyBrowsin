@@ -1,14 +1,15 @@
 {
   "name": "cozybrowsin",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
-  "description": "A plain Chromium window with no browser UI, for personal use.",
+  "description": "A minimal Chromium browser with tabs and Brave's ad blocker, for personal use.",
   "license": "UNLICENSED",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist:linux": "electron-builder --linux",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win",
+    "fetch-filters": "node scripts/fetch-filters.mjs"
   },
   "devDependencies": {
     "electron": "45.2.3",
@@ -20,7 +21,14 @@
     "productName": "CozyBrowsin",
     "files": [
       "main.js",
-      "updater.js"
+      "updater.js",
+      "tabs.js",
+      "adblock.js",
+      "adblock-preload.js",
+      "strip/**",
+      "!**/node_modules/adblock-rs/{target,src,benches,fuzz,data}/**",
+      "!**/node_modules/adblock-rs/js/{src,test}/**",
+      "!**/node_modules/adblock-rs/{Cargo.lock,Cargo.toml,rust-toolchain.toml,rustfmt.toml,CHANGELOG.md,README.md}"
     ],
     "directories": {
       "output": "dist",
@@ -55,9 +63,16 @@
     },
     "toolsets": {
       "appimage": "1.0.3"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "filters",
+        "to": "filters"
+      }
+    ]
   },
   "dependencies": {
+    "adblock-rs": "0.13.5",
     "electron-updater": "6.8.11"
   }
 }
