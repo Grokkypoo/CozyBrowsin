@@ -63,6 +63,25 @@ Builds are unsigned. Windows SmartScreen will warn on install. Updates are prote
 | F12 | Developer tools |
 | Ctrl+Q | Quit |
 
+## Discord login for agents
+
+CozyBrowsin uses Electron's default persistent profile, so once you are logged into Discord the session (cookies + localStorage) is saved and reused on every launch.
+
+To log in quickly with a token (no email/password):
+
+1. Open CozyBrowsin and go to any `discord.com` page (or even `about:blank`).
+2. Open DevTools (F12) → Console.
+3. Paste the contents of `scripts/discord-login.js` and press Enter.
+4. Then run:
+   ```js
+   login("YOUR_DISCORD_TOKEN_HERE")
+   ```
+5. The page reloads and you are signed in. Quit with Ctrl+Q so the session is flushed to disk.
+
+Agents that can evaluate JavaScript in the page can just call `login(token)` directly after loading the helper.
+
+The helper is in [`scripts/discord-login.js`](scripts/discord-login.js).
+
 ## Good to know
 
 - Middle-click a tab to close it. Ctrl+click or middle-click a link to open it in a new tab.
