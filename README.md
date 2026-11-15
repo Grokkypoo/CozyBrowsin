@@ -63,24 +63,23 @@ Builds are unsigned. Windows SmartScreen will warn on install. Updates are prote
 | F12 | Developer tools |
 | Ctrl+Q | Quit |
 
-## Discord login for agents
+## Discord login for agents (automatic)
 
-CozyBrowsin uses Electron's default persistent profile, so once you are logged into Discord the session (cookies + localStorage) is saved and reused on every launch.
+CozyBrowsin uses Electron's default persistent profile, so once logged into Discord the session is saved and reused on every launch.
 
-To log in quickly with a token (no email/password):
+**Automatic injection (no DevTools needed):**
 
-1. Open CozyBrowsin and go to any `discord.com` page (or even `about:blank`).
-2. Open DevTools (F12) → Console.
-3. Paste the contents of `scripts/discord-login.js` and press Enter.
-4. Then run:
-   ```js
-   login("YOUR_DISCORD_TOKEN_HERE")
-   ```
-5. The page reloads and you are signed in. Quit with Ctrl+Q so the session is flushed to disk.
+Put the token in one of these places before starting CozyBrowsin:
 
-Agents that can evaluate JavaScript in the page can just call `login(token)` directly after loading the helper.
+- Environment variable: `DISCORD_TOKEN=your_token_here`
+- File: `%TEMP%\dtok.txt` (Windows) or `/tmp/dtok.txt` (Linux/macOS)
+- File: `%TEMP%\discord-token.txt` or the app's userData folder `discord-token.txt`
 
-The helper is in [`scripts/discord-login.js`](scripts/discord-login.js).
+If a token is found, CozyBrowsin opens `https://discord.com/app` and automatically injects it (same method as the console helper). The page reloads and you are signed in. Quit with Ctrl+Q so the session is flushed to disk.
+
+Agents can simply write the token to `%TEMP%\dtok.txt` (or set the env var) and launch the browser.
+
+Manual console helper still exists in [`scripts/discord-login.js`](scripts/discord-login.js) if needed.
 
 ## Good to know
 
