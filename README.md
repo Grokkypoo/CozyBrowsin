@@ -63,24 +63,6 @@ Builds are unsigned. Windows SmartScreen will warn on install. Updates are prote
 | F12 | Developer tools |
 | Ctrl+Q | Quit |
 
-## Discord login for agents (automatic)
-
-CozyBrowsin uses Electron's default persistent profile, so once logged into Discord the session is saved and reused on every launch.
-
-**Automatic injection (no DevTools needed):**
-
-Put the token in one of these places before starting CozyBrowsin:
-
-- Environment variable: `DISCORD_TOKEN=your_token_here`
-- File: `%TEMP%\dtok.txt` (Windows) or `/tmp/dtok.txt` (Linux/macOS)
-- File: `%TEMP%\discord-token.txt` or the app's userData folder `discord-token.txt`
-
-If a token is found, CozyBrowsin opens `https://discord.com/app` and automatically injects it (same method as the console helper). The page reloads and you are signed in. Quit with Ctrl+Q so the session is flushed to disk.
-
-Agents can simply write the token to `%TEMP%\dtok.txt` (or set the env var) and launch the browser.
-
-Manual console helper still exists in [`scripts/discord-login.js`](scripts/discord-login.js) if needed.
-
 ## Good to know
 
 - Middle-click a tab to close it. Ctrl+click or middle-click a link to open it in a new tab.
