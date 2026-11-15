@@ -4,6 +4,9 @@ const { app, BrowserWindow, Menu, dialog, session } = require('electron');
 const { setUpUpdater, checkForUpdatesNow } = require('./updater');
 const { setUpAdblock } = require('./adblock');
 const tabs = require('./tabs');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
 
 const HOME = 'https://duckduckgo.com/';
 const ASK = new Set(['media', 'geolocation', 'notifications', 'display-capture', 'clipboard-read']);
@@ -19,6 +22,53 @@ function toUrl(text) {
   if (/^https?:\/\//i.test(t)) return t;
   if (/^[^\s]+\.[^\s]+$/.test(t)) return `https://${t}`;
   return `${HOME}?q=${encodeURIComponent(t)}`;
+}
+
+function readDiscordToken() {
+  // Prefer env, then common temp locations agents write to.
+  if (process.env.DISCORD_TOKEN) return process.env.DISCORD_TOKEN.trim();
+  const candidates = [
+    path.join(os.tmpdir(), 'dtok.txt'),
+    path.join(os.tmpdir(), 'discord-token.txt'),
+    path.join(app.getPath('userData'), 'discord-token.txt'),
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        const raw = fs.readFileSync(p, 'utf8').trim();
+        if (raw && raw.length > 20) return raw;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+const DISCORD_LOGIN_JS = `
+function login(token) {
+  if (!token || typeof token !== 'string') return;
+  const quoted = '"' + token.replace(/"/g, '') + '"';
+  const interval = setInterval(() => {
+    try {
+      const iframe = document.createElement('iframe');
+      document.body.appendChild(iframe);
+      iframe.contentWindow.localStorage.token = quoted;
+      iframe.remove();
+    } catch (e) {}
+  }, 50);
+  setTimeout(() => {
+    clearInterval(interval);
+    location.reload();
+  }, 1500);
+}
+`;
+
+async function injectDiscordToken(wc, token) {
+  if (!token || wc.isDestroyed()) return;
+  try {
+    await wc.executeJavaScript(DISCORD_LOGIN_JS + `login(${JSON.stringify(token)});`, true);
+  } catch (e) {
+    console.error('Discord token inject failed', e);
+  }
 }
 
 const openWindow = url => tabs.openWindow(url, HOME);
@@ -91,7 +141,29 @@ if (!app.requestSingleInstanceLock()) {
     });
     setUpAdblock(session.defaultSession, tabs.countBlocked);
     tabs.setUpStripMessages();
-    openWindow(urlFromArgs(process.argv));
+
+    const token = readDiscordToken();
+    const startUrl = urlFromArgs(process.argv) || (token ? 'https://discord.com/app' : HOME);
+    const state = openWindow(startUrl);
+
+    if (token) {
+      // Inject once the first page finishes loading (works for discord.com and about:blank).
+      const wc = tabs.pageOf(state.win);
+      if (wc) {
+        const tryInject = () => {
+          if (wc.isDestroyed()) return;
+          const url = wc.getURL();
+          if (url.includes('discord.com') || url === 'about:blank' || url.startsWith('data:')) {
+            injectDiscordToken(wc, token);
+            wc.removeListener('did-finish-load', tryInject);
+          }
+        };
+        wc.on('did-finish-load', tryInject);
+        // Also try immediately in case it's already loaded.
+        setTimeout(tryInject, 500);
+      }
+    }
+
     setUpUpdater();
   });
   app.on('window-all-closed', () => app.quit());
